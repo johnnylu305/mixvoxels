@@ -2,6 +2,4 @@ log/
 ckpt/
 resources/
 sync.sh
-
-
-
+**/__pycache__

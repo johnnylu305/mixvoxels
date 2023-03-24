@@ -184,8 +184,7 @@ class SSDDataset(Dataset):
         self.ssd_dir = ssd_dir
         self.split = kwargs['split']
         n_batch = 4096 if self.split == 'train' else 1
-        print(ssd_dir)
-        exit()
+        #print(ssd_dir)
         if not os.path.exists(os.path.join(ssd_dir, self.split)):
             os.makedirs(ssd_dir, exist_ok=True)
             os.makedirs(os.path.join(ssd_dir, self.split))
