@@ -36,19 +36,20 @@ def to_directory(file_name, WIDTH, HEIGHT, tmp_dir, start_frame=None, end_frame=
 
 
 def calc(directory_1, directory_2, flip_path, interval):
+    print(directory_1)
+    print(directory_2)
     ALL_PAIRS = []
     for file_name in os.listdir(directory_1):
         if not file_name.endswith('.png'):
             continue
         assert os.path.isfile(os.path.join(directory_1, file_name))
         assert os.path.isfile(os.path.join(directory_2, file_name))
-        ALL_PAIRS.append((os.path.join(directory_1, file_name), os.path.join(directory_2, file_name)))
+        ALL_PAIRS.append((os.path.join(directory_1, file_name), os.path.join(directory_2, file_name)))        
 
     all_results = []
     for file1, file2 in ALL_PAIRS:
         if int(file1.split('/')[-1].split('.')[0]) % interval != 0:
             continue
-        print(file1, file2)
         if flip_path is not None:
             frame_flip_path = os.path.join(flip_path, file1.split('/')[-1].split('.')[0].zfill(5)+'.png')
             result = subprocess.check_output(
@@ -69,7 +70,6 @@ def calc(directory_1, directory_2, flip_path, interval):
         if flip_path is not None:
             add_text(frame_flip_path, all_results[-1]['Mean'])
         print(all_results[-1])
-
     all_results_processed = {k: [_[k] for _ in all_results] for k in all_results[0]}
     print(all_results_processed)
     all_results_processed = {k: sum(all_results_processed[k]) / len(all_results_processed[k]) for k in all_results_processed}
@@ -87,9 +87,15 @@ if __name__ == '__main__':
     parser.add_argument('--start_frame', type=int, default=0)
     parser.add_argument('--end_frame', type=int, default=300)
     args = parser.parse_args()
-
-    WIDTH = 676 * 4 // args.downsample
-    HEIGHT = 507 * 4 // args.downsample
+    if args.downsample == 1:
+        WIDTH = 1280
+        HEIGHT = 720
+    else:
+        WIDTH = 1280 // args.downsample
+        HEIGHT = 720 // args.downsample   
+    #else:
+    #    WIDTH = 676 * 4 // args.downsample
+    #    HEIGHT = 507 * 4 // args.downsample
 
     os.system(f'rm -rf {args.tmp_dir}')
     os.system(f'mkdir {args.tmp_dir}')

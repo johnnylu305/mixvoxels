@@ -937,7 +937,8 @@ class MixVoxels(torch.nn.Module):
                 # depth_map = torch.sum(weight * z_vals.unsqueeze(dim=-1), dim=1)
                 # substitute of the above commented code
                 depth_map = torch.zeros((xyz_sampled.shape[0], num_frames), device=xyz_sampled.device, dtype=(torch.float32))
-                depth_map[ray_mask] = torch.sum(weight[ray_mask] * z_vals.unsqueeze(dim=-1), dim=1)
+                # TODO: check ray_mask
+                depth_map[ray_mask] = torch.sum(weight[ray_mask] * z_vals[ray_mask].unsqueeze(dim=-1), dim=1)
                 depth_map = depth_map + (1. - acc_map) * rays_chunk[..., -1].unsqueeze(dim=-1)
                 depth_map[~ray_mask] = static_depth_map[~ray_mask].detach().unsqueeze(dim=-1)
         # ===================================================

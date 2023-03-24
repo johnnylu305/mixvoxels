@@ -38,12 +38,15 @@ if __name__ == '__main__':
 
     os.system(f'rm -rf {args.tmp_dir}')
     os.system(f'mkdir {args.tmp_dir}')
-    if args.downsample == 2:
-        WIDTH = 1360
-        HEIGHT = 1024
-    elif args.downsample == 4:
-        WIDTH = 688
-        HEIGHT = 512
+    #if args.downsample == 2:
+    #    WIDTH = 1360
+    #    HEIGHT = 1024
+    #elif args.downsample == 4:
+    #    WIDTH = 688
+    #    HEIGHT = 512
+    if args.downsample == 1:
+        WIDTH = 1280
+        HEIGHT = 720
 
     file1 = to_file(args.output, os.path.join(args.tmp_dir, 'nerf_metric_temp1.mp4'), WIDTH, HEIGHT)
     file2 = to_file(args.gt, os.path.join(args.tmp_dir, 'nerf_metric_temp2.mp4'), WIDTH, HEIGHT, start_frame=args.start_frame, end_frame=args.end_frame, cache_dir=args.tmp_dir)

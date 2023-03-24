@@ -20,7 +20,7 @@ upsamp_list = [1000,1500,2000,2750]
 update_AlphaMask_list = [1250]
 
 dataset_name = llffvideo
-datadir = ../data/flame_salmon/
+datadir = ./flame_salmon_1/
 basedir = ./log
 
 downsample_train = 2.0
@@ -51,8 +51,8 @@ temporal_variance_threshold = 0.03
 dynamic_threshold = 0.9
 rm_weight_mask_thre = 0.0001
 rm_weight_mask_thre_static = 0.00001
-n_train_frames = 300
-n_frames = 300
+n_train_frames = 10 #300
+n_frames = 10 #300
 alpha_mask_thre = 0.00001
 
 N_voxel_init =  32768000 # 320**3

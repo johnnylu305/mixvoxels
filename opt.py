@@ -38,6 +38,7 @@ def config_parser(cmd=None):
     parser.add_argument("--n_iters", type=int, default=30000)
     parser.add_argument("--n_dynamic_iters", type=int, default=2000)
     parser.add_argument("--n_frames", type=int, default=100)
+    parser.add_argument("--n_cam", type=int, default=53)
     parser.add_argument("--n_train_frames", type=int, default=10)
     parser.add_argument("--n_time_embedding", type=int, default=24)
     parser.add_argument("--render_views", type=int, default=120)
@@ -45,7 +46,7 @@ def config_parser(cmd=None):
     parser.add_argument("--zero_dynamic_sigma_thresh", type=float, default=0.001)
 
     parser.add_argument('--dataset_name', type=str, default='blender',
-                        choices=['blender', 'llff', 'llffvideo', 'nsvf', 'dtu','tankstemple', 'own_data', 'ssd'])
+                        choices=['blender', 'llff', 'llffvideo', 'nsvf', 'dtu','tankstemple', 'own_data', 'ssd', 'brics'])
     parser.add_argument("--near", type=float, default=0.0)
     parser.add_argument("--far", type=float, default=1.0)
     parser.add_argument("--frame_start", type=int, default=0, help='frame start')

@@ -80,7 +80,7 @@ def evaluation(test_dataset, tensorf, args, renderer, savePath=None, N_vis=5, pr
     for idx, samples in tqdm(enumerate(test_dataset.all_rays[0::img_eval_interval]), file=sys.stdout):
         W, H = test_dataset.img_wh
         rays = samples.view(-1, samples.shape[-1])
-
+        # inference
         retva = renderer(rays, tensorf,  std_train=None, chunk=args.batch_size//2, N_samples=N_samples, ndc_ray=ndc_ray, white_bg = white_bg, device=device, with_grad=False,
                          simplify=simplify, static_branch_only=static_branch_only, remove_foreground=remove_foreground)
         retva = Namespace(**retva)
@@ -108,7 +108,6 @@ def evaluation(test_dataset, tensorf, args, renderer, savePath=None, N_vis=5, pr
             retva.comp_depth_map, _ = visualize_depth_numpy(retva.comp_depth_map.numpy(),near_far)
             print(_)
         retva.static_depth_map, _ = visualize_depth_numpy_static(retva.static_depth_map.numpy(),near_far)
-
         if len(test_dataset.all_rgbs):
             gt_rgb = test_dataset.all_rgbs[idxs[idx]].view(H, W, test_dataset.n_frames, 3)
             gt_static_rgb = gt_rgb.mean(dim=2)
@@ -123,6 +122,7 @@ def evaluation(test_dataset, tensorf, args, renderer, savePath=None, N_vis=5, pr
             PSNRs_STA.append(-10.0 * np.log(loss_static.item()) / np.log(10.0))
 
             if not static_branch_only:
+                # evaluate every 10 frames
                 for i_time in range(0, retva.comp_rgb_map.shape[2], 10):
                     # ssim = rgb_ssim(retva.comp_rgb_map[:,:,i_time,:], gt_rgb[:,:,i_time,:], 1)
                     ssim = sk_ssim(retva.comp_rgb_map[:,:,i_time,:].cpu().detach().numpy(), gt_rgb[:,:,i_time,:].cpu().detach().numpy(), multichannel=True)
@@ -143,6 +143,15 @@ def evaluation(test_dataset, tensorf, args, renderer, savePath=None, N_vis=5, pr
                 if is_video:
                     rgb_maps = [rgb_map[:,:,i,:] for i in range(rgb_map.shape[2])]
                     depth_maps = depth_map
+                    if not os.path.exists(f'{savePath}/images'):
+                        os.mkdir(f'{savePath}/images')
+                    for i in range(len(rgb_maps)):
+                        rgb_image = rgb_maps[i]
+                        depth_image = depth_maps[i]
+                        imageio.imwrite(f'{savePath}/images/{prtx}_{name}_rgb.png', rgb_image)
+                        imageio.imwrite(f'{savePath}/images/{prtx}_{name}_depth.png', depth_image)
+                        imageio.imwrite(f'{savePath}/images/{prtx}_{name}_rgbdepth.png', np.concatenate([rgb_image, depth_image], axis=1))
+                        
                     # if savePath is not None:
                     # imageio.mimwrite(f'{savePath}/{prtx}_{name}_video.mp4', np.stack(rgb_maps), fps=30/(300/len(rgb_maps)), quality=10)
                     imageio.mimwrite(f'{savePath}/{prtx}_{name}_video.mp4', np.stack(rgb_maps), fps=30, quality=10)
@@ -156,19 +165,26 @@ def evaluation(test_dataset, tensorf, args, renderer, savePath=None, N_vis=5, pr
                     imageio.imwrite(f'{savePath}/{prtx}_{name}_depth.png', depth_map)
                     imageio.imwrite(f'{savePath}/{prtx}_{name}_rgbdepth.png', np.concatenate([rgb_map, depth_map], axis=1))
             # calculate flip value
+            print('=================FLIP==================')
             gt_video = os.path.join(args.datadir, 'frames_{}'.format(int(args.downsample_train)), 'cam00')
             output_path = os.path.join(savePath, f'{prtx}_comp_video.mp4')
+            # TODO: CCV does not support flip
+            flip_output = 0.0
+            print(gt_video)
+            print(output_path)
             try:
                 flip_output = subprocess.check_output(shlex.split(
-                    f'python eval/main.py --output {output_path} --gt {gt_video} --downsample {int(args.downsample_train)} --tmp_dir /tmp/{args.expname} --start_frame {args.frame_start} --end_frame {args.frame_start + args.n_frames}'
+                    f'python eval/main.py --output {output_path} --gt {gt_video} --downsample {int(args.downsample_train)} --tmp_dir ./tmp/{args.expname} --tmp_gt_dir ./tmp/{args.expname + "_gt"} --start_frame {args.frame_start} --end_frame {args.frame_start + args.n_frames}'
                 )).decode()
                 flip_output = eval('{'+flip_output.split('{')[-1])['Mean']
             except:
                 flip_output = 0.0
+            print('=================JOD==================')
             # calculate jod
+            # TODO: CCV does not support jod value
+            jod_output = 0.0
             try:
                 jodcmd = f'python eval/main_jod.py --output {output_path} --gt {gt_video} --downsample {int(args.downsample_train)} --tmp_dir /tmp/{args.expname} --start_frame {args.frame_start} --end_frame {args.frame_start + args.n_frames}'
-                print(jodcmd)
                 jod_output = subprocess.check_output(shlex.split(
                     jodcmd
                 )).decode()
@@ -211,7 +227,6 @@ def evaluation(test_dataset, tensorf, args, renderer, savePath=None, N_vis=5, pr
     #         np.savetxt(f'{savePath}/{prtx}mean.txt', np.asarray([psnr, psnr_pf, psnr_sta]))
     #     else:
     #         np.savetxt(f'{savePath}/{prtx}mean.txt', np.asarray([psnr_sta]))
-
     if not static_branch_only:
         print('PSNR:{:.6f}, PSNR_PERFRAME:{:.6f}, PSNR_STA:{:.6f}'.format(psnr, psnr_pf, psnr_sta))
         return PSNRs, PSNRs_STA, total_results
@@ -239,19 +254,54 @@ def evaluation_path(test_dataset, tensorf, args, c2ws, renderer, savePath=None, 
     n_train_frames = temporal_sampler.sample_frames
     camera_per_frame = [int(i/n_frames*len(c2ws)) for i in range(n_frames)]
     frames_per_camera = [[] for i in range(len(c2ws))]
+  
     for i_frame, i_camera in enumerate(camera_per_frame):
         frames_per_camera[i_camera].append(i_frame)
 
     tictok = TicTok()
     processings = []
+    
+    # path_outputs = []
+    # last_temporal_indices = [0]
+    # for idx, c2w in tqdm(enumerate(c2ws)):
+    #     if idx < start_idx:
+    #         continue
+    #     temporal_indices = frames_per_camera[idx]
+    #     if not temporal_indices:
+    #         temporal_indices = last_temporal_indices
+    #     else:
+    #         last_temporal_indices = temporal_indices
+    #     temporal_indices = torch.as_tensor(temporal_indices).long().cuda()
+    #     c2w = torch.FloatTensor(c2w)
+    #     rays_o, rays_d = get_rays(test_dataset.directions, c2w)  # both (h*w, 3)
+    #     if ndc_ray:
+    #         rays_o, rays_d = ndc_rays_blender(H, W, test_dataset.focal[0], 1.0, rays_o, rays_d)
+    #     rays = torch.cat([rays_o, rays_d], 1)  # (h*w, 6)
+    #     tictok.tik_print('pre-render')
+    #     retva = renderer(rays, tensorf, std_train=None, chunk=args.batch_size*4, N_samples=N_samples,
+    #                      ndc_ray=ndc_ray, white_bg = white_bg, device=device, with_grad=False,
+    #                      simplify=True, static_branch_only=static_branch_only, temporal_indices=temporal_indices,
+    #                      remove_foreground=remove_foreground, diff_calc=False, render_path=True, nodepth=nodepth)
+    #     tictok.tik_print('render')
+    #     retva = Namespace(**retva)
+
+    #     # retva.rgb_map = retva.rgb_map.clamp(0.0, 1.0)
+    #     retva.comp_rgb_map = retva.comp_rgb_map.clamp(0.0, 1.0)
+        
+    #     comp_rgb_map = retva.comp_rgb_map.reshape(H, W, n_train_frames, 3).cpu()
+        
     for idx, c2w in tqdm(enumerate(c2ws)):
+        #print(c2w)
         if idx < start_idx:
             continue
 
         tictok.tik()
         temporal_indices = torch.arange(n_frames).long().cuda()
+        #print(temporal_indices)
         c2w = torch.FloatTensor(c2w)
-        rays_o, rays_d = get_rays(test_dataset.directions, c2w)  # both (h*w, 3)
+        # TODO: support one camera intrinsics
+        #rays_o, rays_d = get_rays(test_dataset.directions, c2w)  # both (h*w, 3)
+        rays_o, rays_d = get_rays(test_dataset.directions[0], c2w)  # both (h*w, 3)
         if ndc_ray:
             rays_o, rays_d = ndc_rays_blender(H, W, test_dataset.focal[0], 1.0, rays_o, rays_d)
         rays = torch.cat([rays_o, rays_d], 1)  # (h*w, 6)

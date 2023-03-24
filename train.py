@@ -640,6 +640,7 @@ def reconstruction(args):
                 if key not in TESTKEYS:
                     Metrics[key] = []
 
+        #print(iteration, args.vis_every, args.N_vis)
         if iteration % args.vis_every == args.vis_every - 1 and args.N_vis!=0:
             tensorf.save(f'{logfolder}/{args.expname}.th')
             cuda_empty()
@@ -664,7 +665,7 @@ def reconstruction(args):
 
             if not args.ndc_ray and iteration == update_AlphaMask_list[1]:
                 # filter rays outside the bbox
-                allrays,allrgbs = tensorf.filtering_rays(allrays,allrgbs)
+                allrays,allrgbs,allstds = tensorf.filtering_rays(allrays,allrgbs,allstds)
                 # trainingSampler = SimpleSampler(allrgbs.shape[0], args.batch_size)
             cuda_empty()
             current_batch_size = int(batch_factor[update_AlphaMask_list.index(iteration)] * args.batch_size)

@@ -178,11 +178,14 @@ def get_spiral(c2ws_all, near_fars, rads_scale=0.5, N_views=120):
     render_poses = render_path_spiral(c2w, up, rads, focal, zdelta, zrate=.5, N=N_views)
     return np.stack(render_poses)
 
+
 class SSDDataset(Dataset):
     def __init__(self, ssd_dir, *args, **kwargs):
         self.ssd_dir = ssd_dir
         self.split = kwargs['split']
         n_batch = 4096 if self.split == 'train' else 1
+        print(ssd_dir)
+        exit()
         if not os.path.exists(os.path.join(ssd_dir, self.split)):
             os.makedirs(ssd_dir, exist_ok=True)
             os.makedirs(os.path.join(ssd_dir, self.split))
@@ -268,6 +271,7 @@ class SSDDataset(Dataset):
         self.curr = self.n_saving
         self.total = self.n_saving
         self.batch = 1
+
 
 class LLFFVideoDataset(Dataset):
     def __init__(self, datadir, split='train', downsample=4, is_stack=False, hold_id=[0,], n_frames=100,
@@ -477,11 +481,11 @@ def _calc_std(frame_path_root, std_path_root, frame_start=0, n_frame=300):
         frames = []
         for fp in frame_paths:
             frame = Image.open(fp).convert('RGB')
-            frame = np.array(frame, dtype=np.float) / 255.
+            frame = np.array(frame, dtype=float) / 255.
             frames.append(frame)
         frame = np.stack(frames, axis=0)
         std_map = frame.std(axis=0).mean(axis=-1)
-        std_map_blur = (cv2.GaussianBlur(std_map, (31, 31), 0)).astype(np.float)
+        std_map_blur = (cv2.GaussianBlur(std_map, (31, 31), 0)).astype(float)
         np.save(std_path + '_std.npy', std_map_blur)
         print(frame_paths)
         # print(frame_path)
